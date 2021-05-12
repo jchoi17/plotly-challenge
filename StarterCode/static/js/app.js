@@ -6,12 +6,12 @@ var bar_chart = d3.select("#bar");
 var bubble_chart = d3.select("bubble");
 var gauge_chart = d3.select("gauge");
 
-// create dropdown menus and default id
+// create initial landing page
 function initial() {
 
     // read in data
     d3.json("samples.json").then((data => {
-        //  use a forEach to populate dropdown menu
+
         data.names.forEach((name => {
             var option = selID.append("option");
             option.text(name);
@@ -20,12 +20,13 @@ function initial() {
 
         // plot charts default ID
         getPlots(default_id);
+
     }));
 
 }
 
 // create function to reset the data when selecting new ID
-function resetData() {
+function reset() {
     demographics_table.html("");
     bar_chart.html("");
     bubble_chart.html("");
@@ -38,45 +39,42 @@ function getPlots(id) {
     // read in the JSON data
     d3.json("samples.json").then((data => {
 
-
-        // filter the metadata for the ID chosen
+        // filter on selected ID
         var id_metadata = data.metadata.filter(d => d.id == id)[0];
-
-        // get the wash frequency for gauge chart later
         var wfreq = id_metadata.wfreq;
 
-        // Iterate through each key and value in the metadata
+        // loop through data for keys & values
         Object.entries(id_metadata).forEach(([key, value]) => {
 
             var table_list = demographics_table.append("ul");
             table_list.attr("class", "list-group list-group-flush");
             var item = table_list.append("ul");
 
-            // add the kye value pair to the demographic info
+            // add data to the demographics table
             item.text(`${key}: ${value}`);
 
         });
 
-        // filter the samples for the ID chosen
+        // filter the samples on ID
         var id_sample = data.samples.filter(d => d.id == id)[0];
 
         // create empty arrays to store sample data
-        var otuIds = [];
-        var otuLabels = [];
-        var sampleValues = [];
+        var otu_ids = [];
+        var otu_labels = [];
+        var sample_values = [];
 
-        // retreive data for the id selected
+        // loop through OTU data for selected ID
         Object.entries(id_sample).forEach(([key, value]) => {
 
             switch (key) {
                 case "otu_ids":
-                    otuIds.push(value);
+                    otu_ids.push(value);
                     break;
                 case "sample_values":
-                    sampleValues.push(value);
+                    sample_values.push(value);
                     break;
                 case "otu_labels":
-                    otuLabels.push(value);
+                    otu_labels.push(value);
                     break;
                 default:
                     break;
@@ -85,20 +83,20 @@ function getPlots(id) {
         }); 
 
         // slice and reverse the arrays to get the top 10 values, labels and IDs
-        var topOtuIds = otuIds[0].slice(0, 10).reverse();
-        var topOtuLabels = otuLabels[0].slice(0, 10).reverse();
-        var topSampleValues = sampleValues[0].slice(0, 10).reverse();
+        var top_otuIDs = otu_ids[0].slice(0, 10).reverse();
+        var top_otulabels = otu_labels[0].slice(0, 10).reverse();
+        var top_samplevalues = sample_values[0].slice(0, 10).reverse();
 
         // use the map function to store the IDs with "OTU" for labelling y-axis
-        var topOtuIdsFormatted = topOtuIds.map(otuID => "OTU " + otuID);
+        var top_otuIDs_formatted = top_otuIDs.map(otuID => "OTU " + otuID);
 
         // plot bar chart
 
-        // create a trace
-        var traceBar = {
-            x: topSampleValues,
-            y: topOtuIdsFormatted,
-            text: topOtuLabels,
+        // create trace
+        var bar_trace = {
+            x: top_samplevalues,
+            y: top_otuIDs_formatted,
+            text: top_otulabels,
             type: 'bar',
             orientation: 'h',
             marker: {
@@ -107,10 +105,10 @@ function getPlots(id) {
         };
 
         // create the data array for plotting
-        var dataBar = [traceBar];
+        var bar_data = [bar_trace];
 
         // define the plot layout
-        var layoutBar = {
+        var bar_layout = {
             height: 500,
             width: 600,
             title: {
@@ -129,21 +127,19 @@ function getPlots(id) {
 
 
         // plot the bar chart to the "bar" div
-        Plotly.newPlot("bar", dataBar, layoutBar);
+        Plotly.newPlot("bar", bar_data, bar_layout);
 
-        // ----------------------------------
-        // PLOT BUBBLE CHART
-        // ----------------------------------
+        // Bubble Chart
 
         // create trace
         var bubble_trace = {
-            x: otuIds[0],
-            y: sampleValues[0],
-            text: otuLabels[0],
+            x: otu_ids[0],
+            y: sample_values[0],
+            text: otu_labels[0],
             mode: 'markers',
             marker: {
-                size: sampleValues[0],
-                color: otuIds[0],
+                size: sample_values[0],
+                color: otu_ids[0],
                 colorscale: 'Rainbow'
             }
         };
@@ -187,7 +183,7 @@ function getPlots(id) {
                         size: 15
                     }
                 },
-                bar: { color: 'rgba(0,0,0,0)' }, // make bar transparent
+                bar: { color: 'rgba(0,0,0,0)' },
 
                 steps: [
                     { range: [0, 1], color: 'ivory'},
@@ -231,10 +227,9 @@ function getPlots(id) {
         // create a data array from the two traces
         var gauge_data = [gauge_trace, needle_center];
 
-        // define a layout for the chart
+        // define gauge chart layout
         var gauge_layout = {
 
-            // draw the needle pointer shape using path defined above
             shapes: [{
                 type: 'path',
                 path: path,
@@ -272,12 +267,13 @@ function getPlots(id) {
     })); 
 };
 
-// when there is a change in the dropdown select menu, this function is called with the ID as a parameter
+// update with new selection
 function optionChanged(id) {
 
     // reset the data & get new charts
-    resetData();
+    reset();
     getPlots(id);
+
 }
 
 // call the init() function for default data
